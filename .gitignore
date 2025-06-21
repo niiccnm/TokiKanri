@@ -1,0 +1,64 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+*.zip
+*.exe
+
+# Keep project-specific spec files
+!TokiKanri.spec
+
+# Virtual environments
+venv/
+env/
+ENV/
+.env
+.venv
+
+# Logs
+logs/
+*.log
+*.debug
+timetrack_debug.log
+
+# User data
+program_tracker_data.json
+tokikanri_config.json
+timetrack_config.json
+
+# Temporary files
+*.tmp
+
+# IDE specific files
+.idea/
+.vscode/
+*.swp
+*.swo
+.windsurf/
+.windsurf
+
+# OS specific files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Version folders and archives
+versions/
+
+# Backup files
+*~
+*.bak
+
+# Rebranding utilities
+rename_data_files.bat
+rebranding_*.md
+
+# Incorrectly named files
+*.txt.txt 
