@@ -123,7 +123,7 @@ class SettingsWindow(tk.Toplevel, BaseWidget):
         github_btn = self.create_button(
             links_frame,
             " GitHub",
-            lambda: self._open_url("https://github.com/niiccnm"),
+            lambda: self._open_url("https://github.com/niiccnm/TokiKanri"),
             ModernStyle.get_accent_color(),
             width=12,
         )
