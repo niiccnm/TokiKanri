@@ -63,8 +63,6 @@ class ErrorWindow:
         self.text.insert('1.0', error_message)
         self.root.mainloop()
 
-# Removed write_to_log function, now using Logger
-
 def check_requirements():
     """Check Python version and required modules"""
     try:
@@ -92,8 +90,6 @@ def check_requirements():
 def main():
     """Main application entry point"""
     try:
-        logger.info(f"Starting {get_version_string()}")
-        
         # Check requirements
         requirements_met, error_message = check_requirements()
         if not requirements_met:
@@ -134,8 +130,9 @@ Please report this error to the developer."""
 
 if __name__ == "__main__":
     try:
-        print(f"{get_version_string()}")
-        logger.info("Starting TokiKanri...")
+        version_string = get_version_string()
+        print(f"{version_string}")
+        logger.info(f"Starting {version_string}...")
         sys.exit(main())
     except Exception as e:
         logger.critical(f"Critical error: {Logger.format_error(e)}")

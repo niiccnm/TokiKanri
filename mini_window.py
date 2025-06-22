@@ -307,6 +307,8 @@ class MiniWindow:
         else:
             bg_color = ModernStyle.MINI_NO_TRACKING_BG
             dot_color = STATUS_DOT_INACTIVE_COLOR
+            # Use placeholder text when not tracking
+            time_text = NO_TRACKING_TIME_TEXT
             
         # Update UI elements
         self.frame.config(bg=bg_color)

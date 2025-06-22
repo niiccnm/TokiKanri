@@ -8,6 +8,10 @@ from version import VERSION, VERSION_DATE
 
 class Config:
     """Application configuration management"""
+    # Singleton instance
+    _instance = None
+    
+    # Default configuration
     DEFAULT_CONFIG = {
         'max_programs': 10,
         'inactivity_threshold': 3,
@@ -25,11 +29,26 @@ class Config:
         'start_at_startup': False,
         'start_in_mini_mode': True,
         'dark_mode': False,
+        'media_mode_enabled': False,
+        'media_programs': ['vlc.exe', 'mpv.exe', 'mpc-hc.exe', 'mpc-hc64.exe', 'mpc-be.exe', 'mpc-be64.exe', 'PotPlayerMini64.exe', 'PotPlayerMini.exe', 'MusicBee.exe', 'Spotify.exe'],
+        'require_media_playback': False,
         'version': VERSION,
         'version_date': VERSION_DATE
     }
+    
+    def __new__(cls):
+        """Create or return the singleton instance"""
+        if cls._instance is None:
+            cls._instance = super(Config, cls).__new__(cls)
+            cls._instance._initialized = False
+        return cls._instance
 
     def __init__(self):
+        """Initialize configuration (only once)"""
+        # Skip initialization if already done
+        if hasattr(self, '_initialized') and self._initialized:
+            return
+            
         # Initialize logger first to ensure it's available
         self.logger = Logger()
         
@@ -39,11 +58,15 @@ class Config:
         
         # Use absolute path for config file
         self.config_file = base_dir / 'tokikanri_config.json'
-        self.logger.info(f"Config file path: {self.config_file}")
         
         # Load configuration
         self.load_config()
-        self.logger.info(f"Configuration loaded from {self.config_file}")
+        
+        # Log settings once at INFO level after initial load
+        self.logger.info(f"Loaded settings: dark_mode={self.config.get('dark_mode')}, max_programs={self.config.get('max_programs')}")
+        
+        # Mark as initialized
+        self._initialized = True
 
     def load_config(self):
         """Load configuration from file or create default"""
@@ -53,7 +76,7 @@ class Config:
                     loaded_config = json.load(f)
                     # Merge loaded config with defaults
                     self.config = {**self.DEFAULT_CONFIG, **loaded_config}
-                    self.logger.info(f"Loaded settings: dark_mode={self.config.get('dark_mode')}, max_programs={self.config.get('max_programs')}")
+                    self.logger.debug(f"Loaded settings from file: {self.config_file}")
             else:
                 self.config = self.DEFAULT_CONFIG.copy()
                 self.logger.info("Config file not found, using defaults")
@@ -81,9 +104,9 @@ class Config:
                 if self.config_file.exists():
                     self.config_file.unlink()
                 temp_file.rename(self.config_file)
-            
-            # Log success
-            self.logger.info(f"Configuration saved to {self.config_file}")
+                
+                # Log success
+                self.logger.info(f"Configuration saved to {self.config_file}")
                 
         except Exception as e:
             self.logger.error(f"Error saving config: {e}")
@@ -181,4 +204,3 @@ class Config:
         self.config['version'] = VERSION
         self.config['version_date'] = VERSION_DATE
         self.save_config()
-        self.logger.info(f"Updated version info to {VERSION} ({VERSION_DATE})")

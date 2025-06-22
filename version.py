@@ -4,8 +4,8 @@ This file contains the current version number and related metadata.
 """
 
 # Version information
-VERSION = "0.0.1"  # Current version based on CHANGELOG.md
-VERSION_DATE = "2025-06-20"  # Release date from CHANGELOG.md
+VERSION = "0.0.2"  # Current version based on CHANGELOG.md
+VERSION_DATE = "2025-06-21"  # Release date from CHANGELOG.md
 COMPANY_NAME = "nncc"  # Company/publisher name
 
 # Version as tuple for programmatic comparisons

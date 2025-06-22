@@ -37,14 +37,9 @@ class ProgramTokiKanri:
         
         # Update version information in config
         self.config.update_version()
-        self.logger.info(f"Application version: {get_version_string()}")
-        
-        # Ensure config file is properly saved at startup
-        self.config.save_config()
         
         # Initialize dark mode from config
         dark_mode = self.config.get("dark_mode", False)
-        self.logger.info(f"Dark mode setting loaded from config: {dark_mode}")
         ModernStyle.toggle_dark_mode(dark_mode)
         
         # Create the main root window and apply styles
@@ -80,6 +75,9 @@ class ProgramTokiKanri:
             self.main_window.update_ui_for_theme()
             # Mini window doesn't need theme updates as it uses fixed colors
         
+        # Update activity tracker settings from config
+        self.update_activity_tracker_settings()
+        
         # Start tracking loops
         self._start_tracking_loops()
         
@@ -96,6 +94,9 @@ class ProgramTokiKanri:
         current_time = time.time()
         time_delta = current_time - self.last_update_time
         self.last_update_time = current_time
+        
+        # Track if any program time has been updated
+        time_updated = False
             
         if not self.window_selector.selecting_window:
             try:
@@ -108,19 +109,21 @@ class ProgramTokiKanri:
                         self.data_manager.tracked_programs[current_process] += time_delta
                         self.data_manager.currently_tracking = current_process
                         self._update_status(True, current_process)
+                        time_updated = True
                     else:
                         self.data_manager.currently_tracking = current_process  # Keep tracking the program even when inactive
                         self._update_status(False, current_process)
                         
-                    # Update displays and sort if program switched
-                    if program_switched:
+                    # Always reorder widgets when program switched or time updated
+                    if program_switched or time_updated:
+                        # Use reorder_widgets which now respects search filters and always sorts by time
                         self.main_window.program_gui.reorder_widgets(
                             self.data_manager.get_current_times(),
                             self.data_manager.currently_tracking
                         )
-                        self._update_displays()
-                    else:
-                        self._update_displays()
+                    
+                    # Always update displays to ensure mini window shows correct time
+                    self._update_displays()
                 else:
                     # Stop tracking if current window is not tracked
                     self.data_manager.currently_tracking = None
@@ -151,14 +154,17 @@ class ProgramTokiKanri:
             if was_active != self.activity_tracker.is_active:
                 self._handle_activity_change()
                 # Reorder widgets to reflect new activity state without recreating
+                # Use reorder_widgets which now respects search filters and always sorts by time
                 self.main_window.program_gui.reorder_widgets(
                     self.data_manager.get_current_times(),
                     self.data_manager.currently_tracking
                 )
+                # Immediately update displays to reflect the activity change
                 self._update_displays()
             
         if not self.is_shutting_down:
-            self.main_window.root.after(100, self.check_activity) # Keep activity check responsive at 100ms
+            # Check more frequently to be more responsive to media state changes
+            self.main_window.root.after(50, self.check_activity) # Increased responsiveness for media tracking
             
     def _handle_activity_change(self):
         """Handle changes in activity state"""
@@ -168,10 +174,50 @@ class ProgramTokiKanri:
                 self._update_status(True, self.data_manager.currently_tracking)
             else:
                 self._update_status(False, self.data_manager.currently_tracking)
-                # self.data_manager.save_data()  # Removed save data when pausing, now handled by periodic save
+                # Force an immediate update when activity stops
+                self._update_displays()
+                # Save data immediately when activity stops
+                self.data_manager.save_data()
+    
+    def update_activity_tracker_settings(self):
+        """Update ActivityTracker settings from config"""
+        # Get the latest settings from config
+        old_media_mode = self.activity_tracker.media_mode_enabled
+        old_require_playback = self.activity_tracker.require_media_playback
+        old_media_programs = self.activity_tracker.media_programs
+        
+        # Update settings from config
+        self.activity_tracker.inactivity_threshold = self.config.get('inactivity_threshold')
+        self.activity_tracker.media_mode_enabled = self.config.get('media_mode_enabled', False)
+        self.activity_tracker.require_media_playback = self.config.get('require_media_playback', True)
+        
+        # Make sure we get the latest media_programs list from the config
+        media_programs = self.config.get('media_programs', [])
+        if not media_programs:
+            media_programs = []
+            
+        self.activity_tracker.media_programs = media_programs
+        
+        # Log only significant changes
+        media_programs_changed = set(old_media_programs) != set(media_programs)
+        
+        if old_media_mode != self.activity_tracker.media_mode_enabled:
+            self.logger.info(f"Media mode changed: {old_media_mode} -> {self.activity_tracker.media_mode_enabled}")
+            
+        if old_require_playback != self.activity_tracker.require_media_playback:
+            self.logger.info(f"Require media playback changed: {old_require_playback} -> {self.activity_tracker.require_media_playback}")
+            if not self.activity_tracker.require_media_playback:
+                self.logger.info("Media programs will be considered active regardless of playback status")
+            else:
+                self.logger.info("Media programs will only be considered active when media is playing")
+                
+        # Only log media programs if they've changed or if media mode was just enabled
+        if media_programs_changed or (not old_media_mode and self.activity_tracker.media_mode_enabled):
+            self.activity_tracker.log_media_programs()
                     
     def _update_displays(self):
-        """Update all window displays"""
+        """Update all displays with current data"""
+        # Get current times
         current_times = self.data_manager.get_current_times()
         
         # Update main window displays
@@ -188,12 +234,18 @@ class ProgramTokiKanri:
         
         # Update mini window - always show current time when tracking, even when inactive
         if self.data_manager.currently_tracking:
-            current_time = self.data_manager.tracked_programs[self.data_manager.currently_tracking]
-            self.mini_window.update_display(
-                TimeFormatter.format_time(current_time),
-                self.activity_tracker.is_active,
-                True  # Always true when we have a currently tracking program
-            )
+            # Get the time for the currently tracking program
+            current_program = self.data_manager.currently_tracking
+            if current_program in self.data_manager.tracked_programs:
+                current_time = self.data_manager.tracked_programs[current_program]
+                self.mini_window.update_display(
+                    TimeFormatter.format_time(current_time),
+                    self.activity_tracker.is_active,
+                    True  # Always true when we have a currently tracking program
+                )
+            else:
+                # Fallback if the program isn't in tracked_programs (shouldn't happen)
+                self.mini_window.update_display("00:00", self.activity_tracker.is_active, True)
         else:
             self.mini_window.update_display("--:--", False, False)
             
@@ -202,12 +254,38 @@ class ProgramTokiKanri:
         if program is None:
             status_text = "Ready to Track"
         else:
+            # Get custom display name if available
+            display_name = self.data_manager.get_display_name(program)
+            # Format the program name
+            if display_name:
+                program_display = display_name
+            else:
+                # Use the same formatting logic as in program_gui.py
+                lower = program.lower()
+                if lower in ('explorer.exe', 'explorer'):
+                    program_display = 'Windows File Explorer'
+                elif lower == 'clipstudiopaint.exe':
+                    program_display = 'Clip Studio Paint'
+                elif lower == 'code.exe':
+                    program_display = 'VS Code'
+                elif lower == 'dnplayer.exe':
+                    program_display = 'LDPlayer'
+                else:
+                    program_display = program[:-4] if lower.endswith('.exe') else program
+                
+                # Capitalize first character if it is lowercase
+                if program_display and program_display[0].islower():
+                    program_display = program_display[0].upper() + program_display[1:]
+            
             if is_active:
-                status_text = f"Tracking: {program}"
+                status_text = f"Tracking: {program_display}"
             else:
                 status_text = "Tracking paused: No activity"
             
         self.main_window.update_status(status_text, is_active)
+        
+        # Also update mini window status
+        self.mini_window.update_status(is_active, program)
         
     # Window management methods
     def show_mini_window(self):
@@ -498,3 +576,31 @@ class ProgramTokiKanri:
             self.root.mainloop()
         except Exception as e:
             self.logger.critical(f"Error in main loop: {Logger.format_error(e)}")
+
+    def reload_config(self):
+        """Reload configuration from file"""
+        try:
+            self.config.load_config()
+            self.logger.info("Configuration reloaded")
+            # Update activity tracker settings after reloading config
+            self.update_activity_tracker_settings()
+            return True
+        except Exception as e:
+            self.logger.error(f"Error reloading config: {Logger.format_error(e)}")
+            return False
+            
+    def update_ui_for_theme(self):
+        """Update UI elements for the current theme"""
+        # Update main window
+        if hasattr(self, 'main_window'):
+            self.main_window.update_ui_for_theme()
+            
+        # Update mini window if needed
+        if hasattr(self, 'mini_window') and hasattr(self.mini_window, 'update_ui_for_theme'):
+            self.mini_window.update_ui_for_theme()
+            
+        # Update settings window if it exists
+        if hasattr(self.main_window, '_settings_window') and self.main_window._settings_window:
+            self.main_window._settings_window.update_ui_for_theme()
+            
+        self.logger.info("Updated UI for theme change")

@@ -62,3 +62,7 @@ rebranding_*.md
 
 # Incorrectly named files
 *.txt.txt 
+
+# Test files
+test_media_mode.py
+test_unicode.py 

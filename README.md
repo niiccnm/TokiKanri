@@ -2,6 +2,10 @@
 
 This is a time-tracking application for Windows that allows you to monitor the time you spend on different programs.
 
+## Download
+
+You can download the latest version of TokiKanri from the [Releases section](https://github.com/nncc/TokiKanri/releases) of the repository.
+
 ## What it does
 
 The application tracks the active window on your desktop and records the time spent on each program. It provides a user-friendly interface to view and manage the tracked applications.
@@ -13,6 +17,10 @@ The application tracks the active window on your desktop and records the time sp
 - **Main and Mini Views**: A main window provides a detailed view of all tracked programs, while a mini-window offers a compact, always-on-top view of the currently tracked application.
 - **System Tray Integration**: The application can be minimized to the system tray for unobtrusive operation.
 - **Activity-Based Tracking**: Automatically pauses the timer when no user activity is detected.
+- **Custom Display Names**: Rename tracked programs with custom display names that persist across application restarts.
+- **Media Mode**: Tracks window activity for media players without requiring user input, perfect for watching videos or listening to music.
+- **Media Playback Detection**: Optionally only tracks time when media is actually playing, using Windows Media Control API.
+- **Customizable Media Programs**: Add or remove programs that should be considered media players for Media Mode.
 - **Timer Controls**: You can reset timers for individual programs or for all tracked programs at once.
 - **Program Management**: Add new programs to the tracking list or remove existing ones.
 - **Always on Top**: Pin the window to keep it visible over other applications.
@@ -24,6 +32,8 @@ The application tracks the active window on your desktop and records the time sp
   - Dark mode toggle
   - Mini-window startup option
   - Windows startup integration
+  - Media mode for tracking without user input
+  - Customize media programs list
 - **Import/Export**: Save and load your tracking data and configuration settings.
 
 ## Requirements
@@ -32,9 +42,10 @@ To run this application, you will need the following:
 
 - Python 3.6 or higher
 - The following Python packages:
-  - `pywin32` (version 303 or higher)
+  - `pywin32` (version 305 or higher)
   - `psutil` (version 5.9.0 or higher)
-  - `pillow` (version 9.0.0 or higher) for system tray icons
+  - `pillow` (version 10.0 or higher) for system tray icons
+  - `winsdk` (version 1.0.0b7 or higher) for media playback detection
 
 You can install the required packages using pip:
 
@@ -60,6 +71,7 @@ python main.py
 - **Minimize Button**: Minimize to the mini-window view.
 - **Settings Button**: Open the settings window.
 - **Search Bar**: Filter tracked programs by name.
+- **Custom Names**: Hover over a program name to reveal the edit button, allowing you to set a custom display name.
 
 ### Mini Window
 - **Double-click**: Switch to the main window view.
@@ -70,7 +82,22 @@ python main.py
 - **Max Programs to Track**: Set the maximum number of programs that can be tracked.
 - **Start at Windows Startup**: Launch the application automatically when Windows starts.
 - **Start in Mini-Window Mode**: Start the application in the compact mini-window view.
+- **Media Mode**: Enable tracking for media players without requiring user input.
+- **Media Programs**: Add or remove programs that should be considered media players.
+- **Require Media Playback**: Only track time for media programs when media is actually playing.
 - **Dark Mode**: Toggle between light and dark themes.
+
+### Media Mode
+Media Mode is designed for tracking time spent watching videos or listening to music. When enabled:
+- The application will continue tracking time for supported media players even if there's no keyboard or mouse activity
+- Default supported players include: VLC, mpv, MPC-HC, MPC-BE, PotPlayer, MusicBee, and Spotify
+- You can customize the list of media programs in the Settings window
+- Process name detection is case-insensitive and works with or without the .exe extension
+- Perfect for accurately tracking time spent consuming media content
+- Optional playback detection ensures time is only tracked when media is actually playing
+- Uses Windows Media Control API to detect if media is playing, paused, or stopped
+
+For detailed setup instructions for all supported media players, see the [Media-Playback-Setup.md](Media-Playback-Setup.md) guide.
 
 ## Data Files
 - **program_tracker_data.json**: Contains tracked program data.
@@ -94,6 +121,12 @@ pyinstaller TokiKanri.spec
 ```
 
 The final executable will be located in the `dist` directory.
+
+## Version History
+
+For a detailed list of changes in each version, please see the [CHANGELOG.md](CHANGELOG.md) file.
+
+Current version: 0.0.2 (2025-06-21)
 
 ## License
 

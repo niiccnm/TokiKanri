@@ -5,6 +5,7 @@ from pathlib import Path
 from logging.handlers import RotatingFileHandler
 import sys
 import time
+import codecs
 
 class Logger:
     """Application logging management"""
@@ -41,17 +42,19 @@ class Logger:
             '%(levelname)s: %(message)s'
         )
 
-        # File handler (with rotation)
-        file_handler = RotatingFileHandler(
-            log_dir / "tokikanri.log",
+        # File handler (with rotation) - using UTF-8 encoding
+        log_file = log_dir / "tokikanri.log"
+        file_handler = UnicodeRotatingFileHandler(
+            log_file,
             maxBytes=5*1024*1024,  # 5MB
-            backupCount=3
+            backupCount=3,
+            encoding='utf-8'
         )
         file_handler.setLevel(logging.DEBUG)
         file_handler.setFormatter(file_formatter)
 
-        # Console handler
-        console_handler = logging.StreamHandler(sys.stdout)
+        # Console handler with UTF-8 encoding
+        console_handler = UnicodeStreamHandler()
         console_handler.setLevel(logging.INFO)
         console_handler.setFormatter(console_formatter)
 
@@ -88,3 +91,32 @@ class Logger:
     def get_base_dir(self):
         """Return the base directory of the application."""
         return self._base_dir
+
+
+class UnicodeRotatingFileHandler(RotatingFileHandler):
+    """A RotatingFileHandler that ensures UTF-8 encoding"""
+    def __init__(self, filename, mode='a', maxBytes=0, backupCount=0, encoding='utf-8', delay=False):
+        super().__init__(filename, mode, maxBytes, backupCount, encoding, delay)
+
+
+class UnicodeStreamHandler(logging.StreamHandler):
+    """A StreamHandler that ensures proper Unicode handling"""
+    def __init__(self, stream=None):
+        if stream is None:
+            stream = sys.stdout
+        super().__init__(stream)
+        
+    def emit(self, record):
+        try:
+            msg = self.format(record)
+            stream = self.stream
+            # Safely encode and decode for console output
+            try:
+                stream.write(msg + self.terminator)
+            except UnicodeEncodeError:
+                # If console can't handle the encoding, use a safe representation
+                safe_msg = msg.encode('utf-8', errors='replace').decode('utf-8', errors='replace')
+                stream.write(safe_msg + self.terminator)
+            self.flush()
+        except Exception:
+            self.handleError(record)

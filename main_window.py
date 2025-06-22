@@ -364,6 +364,7 @@ class DarkModeScrollbar(tk.Canvas):
 class MainWindow(BaseWidget):
     """Main application window"""
     def __init__(self, parent):
+        """Initialize main window"""
         self.parent = parent
         # Use parent's root window
         self.root = parent.root
@@ -371,6 +372,10 @@ class MainWindow(BaseWidget):
         
         # Get config from parent
         self.config = parent.config
+        
+        # Initialize search variables
+        self._active_search = False
+        self._current_search_text = ""
         
         # Set window size from config
         window_size = self.config.get("window_size", {"width": 400, "height": 600})
@@ -398,6 +403,10 @@ class MainWindow(BaseWidget):
         # Main container
         main_container = ttk.Frame(self.root, style="Modern.TFrame")
         main_container.pack(fill=tk.BOTH, expand=True, padx=MAIN_CONTAINER_PADX, pady=MAIN_CONTAINER_PADY)
+        
+        # Bind click event to clear focus from search entry
+        main_container.bind("<Button-1>", self._clear_search_focus)
+        self.root.bind("<Button-1>", self._clear_search_focus)
         
         self._create_header(main_container)
         self._create_controls(main_container)
@@ -600,6 +609,13 @@ class MainWindow(BaseWidget):
                 self._filter_programs
             )
             search_frame.pack(fill=tk.X, pady=(0, 10))
+            
+            # Store reference to the entry widget for focus management
+            for child in search_frame.winfo_children():
+                if isinstance(child, tk.Entry):
+                    self.search_entry = child
+                    break
+                    
         except Exception as e:
             print(f"Warning: Search bar creation failed: {e}")
             # Create a simple fallback search entry
@@ -622,6 +638,9 @@ class MainWindow(BaseWidget):
             )
             entry.pack(fill=tk.X, expand=True)
             entry.bind('<KeyRelease>', self._filter_programs)
+            
+            # Store reference to the entry widget for focus management
+            self.search_entry = entry
             
             # Add placeholder functionality
             entry.insert(0, SEARCH_PLACEHOLDER)
@@ -648,46 +667,27 @@ class MainWindow(BaseWidget):
         search_text = self.search_var.get().lower()
         is_empty_search = not search_text or search_text == SEARCH_PLACEHOLDER.lower()
         
-        # If search is empty, just use the normal reordering function
-        if is_empty_search:
-            self.program_gui.reorder_widgets(
-                self.parent.data_manager.get_current_times(),
-                self.parent.data_manager.currently_tracking
-            )
-            return
+        # Store current search state
+        self._current_search_text = "" if is_empty_search else search_text
+        self._active_search = not is_empty_search
         
-        # For non-empty searches, we need custom filtering
-        
-        # First, unpack all widgets to start fresh
-        for program, widgets in self.program_gui.program_widgets.items():
-            if 'frame' in widgets:
-                widgets['frame'].pack_forget()
-        
-        # Get current sorted programs
-        current_times = self.parent.data_manager.get_current_times()
-        sorted_programs = [p for p, _ in sorted(current_times.items(), key=lambda x: x[1], reverse=True)]
-        
-        # Filter and pack programs in the sorted order
-        visible_programs = []
-        for program in sorted_programs:
-            if program in self.program_gui.program_widgets:
-                widgets = self.program_gui.program_widgets[program]
-                if 'frame' not in widgets:
-                    continue
-                
-                program_name = self.program_gui._format_program_name(program).lower()
-                
-                # Only show programs that match the search
-                if search_text in program_name:
-                    widgets['frame'].pack(fill=tk.X, pady=10)
-                    visible_programs.append(program)
-        
-        # Update the last sorted programs in program_gui to match what we've just done
-        self.program_gui.last_sorted_programs = visible_programs
+        # Use the improved reorder_widgets method which now handles search filtering
+        self.program_gui.reorder_widgets(
+            self.parent.data_manager.get_current_times(),
+            self.parent.data_manager.currently_tracking
+        )
         
         # Update canvas scroll region
         self._on_frame_configure()
         
+    def has_active_search(self):
+        """Check if there's an active search filter"""
+        return hasattr(self, '_active_search') and self._active_search
+        
+    def get_current_search_text(self):
+        """Get the current search text"""
+        return getattr(self, '_current_search_text', "")
+    
     def _create_status(self, parent):
         """Create status display section"""
         self.tracking_status_label = ttk.Label(
@@ -947,24 +947,37 @@ class MainWindow(BaseWidget):
                         bg=ModernStyle.get_card_bg()
                     )
         
-        # Update search entry if it exists - use a safer approach to avoid errors
+        # Update search entry and clear button if they exist
         try:
             for widget in self.root.winfo_children():
                 if isinstance(widget, ttk.Frame):
                     for child in widget.winfo_children():
                         if isinstance(child, ttk.Frame):
+                            # Look for search entry
                             for grandchild in child.winfo_children():
                                 if isinstance(grandchild, tk.Entry):
                                     try:
+                                        bg_color = ModernStyle.get_card_bg()
+                                        fg_color = ModernStyle.get_text_color()
                                         grandchild.configure(
-                                            bg=ModernStyle.get_card_bg(),
-                                            fg=ModernStyle.get_text_color(),
-                                            insertbackground=ModernStyle.get_text_color(),
+                                            bg=bg_color,
+                                            fg=fg_color,
+                                            insertbackground=fg_color,
                                             highlightbackground=ModernStyle.get_card_border()
                                         )
                                     except tk.TclError:
-                                        # Skip if configuration fails
                                         pass
+                                # Look for clear button (X) label
+                                elif isinstance(grandchild, ttk.Frame):
+                                    for button in grandchild.winfo_children():
+                                        if isinstance(button, tk.Label) and button.cget("text") == "✕":
+                                            try:
+                                                button.configure(
+                                                    fg=ModernStyle.get_text_color(),
+                                                    bg=bg_color  # Match the search entry background
+                                                )
+                                            except tk.TclError:
+                                                pass
         except Exception:
             # Ignore any errors in the search entry update
             pass
@@ -980,3 +993,15 @@ class MainWindow(BaseWidget):
         self.root.deiconify()
         self.root.lift()
         self.root.focus_force()
+
+    def _clear_search_focus(self, event=None):
+        """Clear focus from search entry when clicking elsewhere"""
+        # Only process if we have a search entry and the click wasn't on the search entry
+        if hasattr(self, 'search_entry') and self.search_entry.winfo_exists():
+            # Get the search entry's parent frame
+            search_frame = self.search_entry.master if hasattr(self.search_entry, 'master') else None
+            
+            # If the click wasn't on the search entry or its parent frame, clear focus
+            if event and hasattr(event, 'widget') and event.widget != self.search_entry and event.widget != search_frame:
+                self.root.focus_set()  # Set focus to the main window
+

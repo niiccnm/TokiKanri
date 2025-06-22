@@ -25,6 +25,10 @@ class ModernStyle:
     CARD_SHADOW = "#0000001A"
     CARD_ACTIVE_BORDER = "#10B981"
     
+    # Input styling
+    INPUT_BG_COLOR = "#F3F4F6"
+    DARK_INPUT_BG_COLOR = "#2D2D3F"
+    
     # Dark Mode Colors
     DARK_BG_COLOR = "#1E1E2E"
     DARK_ACCENT_COLOR = "#007AFF"
@@ -103,6 +107,10 @@ class ModernStyle:
     @classmethod
     def get_card_active_border(cls):
         return cls.DARK_CARD_ACTIVE_BORDER if cls._dark_mode else cls.CARD_ACTIVE_BORDER
+    
+    @classmethod
+    def get_input_bg_color(cls):
+        return cls.DARK_INPUT_BG_COLOR if cls._dark_mode else cls.INPUT_BG_COLOR
     
     @classmethod
     def apply(cls, root):
@@ -242,15 +250,16 @@ class BaseWidget:
                     card, 
                     highlightthickness=1,
                     highlightbackground=ModernStyle.get_card_border(),
-                    bd=0
+                    bd=0,
+                    bg=ModernStyle.get_card_bg()  # Set background color to match card background
                 )
                 border_canvas.place(x=0, y=0, relwidth=1, relheight=1)
                 
                 # Put the canvas behind all other widgets
-                # Don't use lower() without arguments as it causes errors
+                # Create canvas first, then place it at the bottom of stacking order
                 for child in card.winfo_children():
                     if child != border_canvas:
-                        child.lift()
+                        child.lift(border_canvas)  # Lift all other widgets above the canvas
                 
                 # Store the canvas object as an attribute
                 setattr(card, '_border_canvas_obj', border_canvas)
@@ -258,7 +267,10 @@ class BaseWidget:
                 # Update existing canvas dimensions
                 canvas_obj = getattr(card, '_border_canvas_obj')
                 canvas_obj.configure(width=width, height=height)
-                canvas_obj.configure(highlightbackground=ModernStyle.get_card_border())
+                canvas_obj.configure(
+                    highlightbackground=ModernStyle.get_card_border(),
+                    bg=ModernStyle.get_card_bg()  # Ensure background color is updated when theme changes
+                )
         
         card.bind("<Configure>", configure_card_border)
         
@@ -309,18 +321,66 @@ class BaseWidget:
             if entry.get() == '':
                 entry.insert(0, placeholder)
                 entry.config(foreground=ModernStyle.get_inactive_color())
+        
+        # Function to clear the search entry
+        def clear_search(event=None):
+            entry.delete(0, tk.END)
+            entry.insert(0, placeholder)
+            entry.config(foreground=ModernStyle.get_inactive_color())
+            if command:
+                command(event)  # Trigger the search command to update results
+            # Clear focus from the entry by setting focus to the parent
+            parent.focus_set()
+                
+        # Define a function that will both run the command and clear focus
+        def search_and_clear_focus(event=None):
+            if command:
+                command(event)
+            # Clear focus from the entry by setting focus to the parent
+            parent.focus_set()
                 
         entry.bind('<FocusIn>', on_entry_click)
         entry.bind('<FocusOut>', on_focus_out)
         
         if command:
             entry.bind('<KeyRelease>', command)
+            
+        # Add Enter key binding to submit search and clear focus
+        entry.bind('<Return>', search_and_clear_focus)
+        
+        # Button container to hold search and clear buttons
+        button_frame = ttk.Frame(frame, style="Modern.TFrame")
+        button_frame.pack(side=tk.RIGHT)
+        
+        # Add clear button (X) - with transparent background and adaptive text color
+        clear_btn = tk.Label(
+            button_frame,
+            text="✕",
+            font=('Segoe UI', 9),
+            fg=ModernStyle.get_text_color(),  # Use text color that adapts to theme
+            bg=bg_color,  # Match the search entry background color
+            cursor="hand2"  # Hand cursor for better UX
+        )
+        clear_btn.pack(side=tk.LEFT, padx=(0, 2))
+        
+        # Bind click event to clear button
+        clear_btn.bind("<Button-1>", clear_search)
+        
+        # Add hover effect to clear button
+        def on_clear_enter(e):
+            clear_btn.config(fg=ModernStyle.get_accent_color())
+            
+        def on_clear_leave(e):
+            clear_btn.config(fg=ModernStyle.get_text_color())
+            
+        clear_btn.bind("<Enter>", on_clear_enter)
+        clear_btn.bind("<Leave>", on_clear_leave)
         
         # Add search icon button
         search_btn = BaseWidget.create_button(
-            frame,
+            button_frame,
             text="🔍",
-            command=lambda: command(None) if command else None,
+            command=search_and_clear_focus,
             bg_color=ModernStyle.get_accent_color(),
             padx=5,
             pady=2
