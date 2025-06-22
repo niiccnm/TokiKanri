@@ -4,7 +4,7 @@ This is a time-tracking application for Windows that allows you to monitor the t
 
 ## Download
 
-You can download the latest version of TokiKanri from the [Releases section](https://github.com/nncc/TokiKanri/releases) of the repository.
+You can download the latest version of TokiKanri from the [Releases section](https://github.com/nnccnm/TokiKanri/releases) of the repository.
 
 ## What it does
 
