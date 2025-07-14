@@ -28,7 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [v0.0.3]
+## [v0.0.3] - 2025-07-14
 
 ### Added
 - Automatic update checker to detect new versions from GitHub releases
