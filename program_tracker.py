@@ -433,9 +433,6 @@ class ProgramTokiKanri:
             self.data_manager.currently_tracking
         )
         
-        # Ensure proper mousewheel bindings are maintained
-        self.main_window.update_program_bindings()
-        
         # Update total time
         total_time = sum(current_times.values())
         self.main_window.update_total_time(
