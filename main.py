@@ -95,6 +95,8 @@ def main():
         if not requirements_met:
             raise RuntimeError(error_message)
         
+        # Check for updates (will be done from within the app to avoid circular imports)
+        
         # Create and run program tracker
         logger.info("Creating program tracker instance")
         app = ProgramTokiKanri()

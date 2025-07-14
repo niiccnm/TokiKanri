@@ -43,6 +43,8 @@ timetrack_config.json
 *.swo
 .windsurf/
 .windsurf
+.cursor/
+.cursor
 
 # OS specific files
 .DS_Store

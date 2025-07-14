@@ -30,7 +30,7 @@ CONTROL_BUTTONS_PADY = (0, 10)
 TOTAL_TIME_FRAME_PADY = (0, 20)
 TOTAL_TIME_CONTAINER_PADY = 5
 TOTAL_TIME_LABEL_TEXT = "Total Time Tracked:"
-TOTAL_TIME_DEFAULT_TEXT = "00:00"
+TOTAL_TIME_DEFAULT_TEXT = "--:--"  # Changed from "00:00" to "--:--"
 STATUS_LABEL_DEFAULT_TEXT = "Click 'Select Window' to start tracking"
 STATUS_LABEL_PADY = 10
 CANVAS_ANCHOR = "nw"
@@ -414,6 +414,9 @@ class MainWindow(BaseWidget):
         self._create_status(main_container)
         self._create_programs_area(main_container)
         
+        # Bind window resize event to root window
+        self.root.bind("<Configure>", self._on_window_resize)
+
     def _create_header(self, parent):
         """Create header section"""
         header_frame = ttk.Frame(parent, style="Modern.TFrame")
@@ -470,46 +473,74 @@ class MainWindow(BaseWidget):
         controls_frame = ttk.Frame(parent, style="Modern.TFrame")
         controls_frame.pack(fill=tk.X, pady=CONTROLS_FRAME_PADY)
         
+        # Store reference to controls frame for dynamic updates
+        self.controls_frame = controls_frame
+        
+        # Create both layouts but only show one based on window width
+        self._create_wide_layout(controls_frame)
+        self._create_narrow_layout(controls_frame)
+        
+        # Initially both layouts are hidden
+        if hasattr(self, 'wide_container'):
+            self.wide_container.pack_forget()
+        if hasattr(self, 'narrow_container'):
+            self.narrow_container.pack_forget()
+        
+        # Track current layout mode
+        self.is_narrow_layout = False
+        
+        # Initial layout update - will show the appropriate layout
+        self.root.update_idletasks()  # Ensure window dimensions are updated
+        self._update_layout_for_width()
+        
+        # Create the total time card with explicit colors
+        self._create_total_time_card(parent)
+        
+    def _create_wide_layout(self, parent):
+        """Create original left/right layout for wide windows"""
+        # Container for wide layout
+        self.wide_container = ttk.Frame(parent, style="Modern.TFrame")
+        
         # Left side controls (primary actions)
-        left_controls = ttk.Frame(controls_frame, style="Modern.TFrame")
-        left_controls.pack(side=tk.LEFT)
+        self.wide_left_frame = ttk.Frame(self.wide_container, style="Modern.TFrame")
+        self.wide_left_frame.pack(side=tk.LEFT)
         
         # Select window button (primary action)
-        self.select_button = self.create_button(
-            left_controls,
+        self.wide_select_button = self.create_button(
+            self.wide_left_frame,
             SELECT_WINDOW_BUTTON_TEXT,
             self.parent.start_window_selection,
             ModernStyle.get_success_color(),
             padx=10,
             pady=6
         )
-        self.select_button.pack(side=tk.LEFT, padx=5, pady=CONTROL_BUTTONS_PADY)
+        self.wide_select_button.pack(side=tk.LEFT, padx=5, pady=CONTROL_BUTTONS_PADY)
         
         # Reset all button
-        reset_all_button = self.create_button(
-            left_controls,
+        self.wide_reset_button = self.create_button(
+            self.wide_left_frame,
             RESET_ALL_BUTTON_TEXT,
             self.parent.reset_all_timers,
             ModernStyle.get_button_remove_color(),
             padx=10,
             pady=6
         )
-        reset_all_button.pack(side=tk.LEFT, padx=5, pady=CONTROL_BUTTONS_PADY)
+        self.wide_reset_button.pack(side=tk.LEFT, padx=5, pady=CONTROL_BUTTONS_PADY)
         
         # Remove all button
-        remove_all_button = self.create_button(
-            left_controls,
+        self.wide_remove_button = self.create_button(
+            self.wide_left_frame,
             REMOVE_ALL_BUTTON_TEXT,
             self.parent.remove_all_programs,
             ModernStyle.get_button_remove_color(),
             padx=10,
             pady=6
         )
-        remove_all_button.pack(side=tk.LEFT, padx=5, pady=CONTROL_BUTTONS_PADY)
+        self.wide_remove_button.pack(side=tk.LEFT, padx=5, pady=CONTROL_BUTTONS_PADY)
         
         # Right side controls (secondary actions)
-        right_controls = ttk.Frame(controls_frame, style="Modern.TFrame")
-        right_controls.pack(side=tk.RIGHT)
+        self.wide_right_frame = ttk.Frame(self.wide_container, style="Modern.TFrame")
+        self.wide_right_frame.pack(side=tk.RIGHT)
         
         # Data management buttons in a row
         data_buttons = [
@@ -519,9 +550,12 @@ class MainWindow(BaseWidget):
             (IMPORT_CONFIG_BUTTON_TEXT, self.parent.import_config)
         ]
         
+        # Create data buttons
+        self.wide_data_buttons = []
+        
         for text, command in data_buttons:
             btn = self.create_button(
-                right_controls,
+                self.wide_right_frame,
                 text,
                 command,
                 ModernStyle.get_accent_color(),
@@ -529,9 +563,88 @@ class MainWindow(BaseWidget):
                 pady=5
             )
             btn.pack(side=tk.LEFT, padx=3, pady=CONTROL_BUTTONS_PADY)
+            self.wide_data_buttons.append(btn)
+            
+    def _create_narrow_layout(self, parent):
+        """Create grid layout for narrow windows"""
+        # Container for narrow layout
+        self.narrow_container = ttk.Frame(parent, style="Modern.TFrame")
         
-        # Create the total time card with explicit colors
-        self._create_total_time_card(parent)
+        # Top row for primary actions
+        self.narrow_row1 = ttk.Frame(self.narrow_container, style="Modern.TFrame")
+        self.narrow_row1.pack(fill=tk.X, pady=(0, 8))  # Increased bottom padding
+        
+        # Make the grid columns evenly spaced
+        for i in range(3):
+            self.narrow_row1.columnconfigure(i, weight=1)
+            
+        # Create new buttons for narrow layout with larger font and padding
+        narrow_primary_font = ('Segoe UI', 10, 'bold')  # Larger, bold font for primary buttons
+        
+        # Select window button
+        self.narrow_select_button = self.create_button(
+            self.narrow_row1,
+            SELECT_WINDOW_BUTTON_TEXT,
+            self.parent.start_window_selection,
+            ModernStyle.get_success_color(),
+            padx=8,   # Increased horizontal padding
+            pady=5,   # Increased vertical padding
+            font=narrow_primary_font  # Larger, bold font
+        )
+        self.narrow_select_button.grid(row=0, column=0, sticky="ew", padx=3)
+        
+        # Reset all button
+        self.narrow_reset_button = self.create_button(
+            self.narrow_row1,
+            RESET_ALL_BUTTON_TEXT,
+            self.parent.reset_all_timers,
+            ModernStyle.get_button_remove_color(),
+            padx=8,   # Increased horizontal padding
+            pady=5,   # Increased vertical padding
+            font=narrow_primary_font  # Larger, bold font
+        )
+        self.narrow_reset_button.grid(row=0, column=1, sticky="ew", padx=3)
+        
+        # Remove all button
+        self.narrow_remove_button = self.create_button(
+            self.narrow_row1,
+            REMOVE_ALL_BUTTON_TEXT,
+            self.parent.remove_all_programs,
+            ModernStyle.get_button_remove_color(),
+            padx=8,   # Increased horizontal padding
+            pady=5,   # Increased vertical padding
+            font=narrow_primary_font  # Larger, bold font
+        )
+        self.narrow_remove_button.grid(row=0, column=2, sticky="ew", padx=3)
+        
+        # Bottom row for secondary actions - only Export and Import
+        self.narrow_row2 = ttk.Frame(self.narrow_container, style="Modern.TFrame")
+        self.narrow_row2.pack(fill=tk.X)
+        
+        # Make the grid columns evenly spaced - only 2 columns now
+        for i in range(2):
+            self.narrow_row2.columnconfigure(i, weight=1)
+            
+        # Reduced data management buttons - only Export and Import
+        data_buttons = [
+            (EXPORT_BUTTON_TEXT, self.parent.export_data),
+            (IMPORT_BUTTON_TEXT, self.parent.import_data)
+        ]
+        
+        # Create data buttons for narrow layout - keep these smaller
+        self.narrow_data_buttons = []
+        
+        for i, (text, command) in enumerate(data_buttons):
+            btn = self.create_button(
+                self.narrow_row2,
+                text,
+                command,
+                ModernStyle.get_accent_color(),
+                padx=5,   # Original horizontal padding
+                pady=3    # Original vertical padding
+            )
+            btn.grid(row=0, column=i, sticky="ew", padx=2)
+            self.narrow_data_buttons.append(btn)
     
     def _create_total_time_card(self, parent):
         """Create total time display with card style and explicit colors"""
@@ -597,7 +710,66 @@ class MainWindow(BaseWidget):
                 style="Timer.TLabel"
             )
             self.total_time_label.pack(side=tk.RIGHT)
-    
+        
+    def _update_layout_for_width(self):
+        """Update the layout based on current window width"""
+        window_width = self.root.winfo_width()
+        
+        # Minimum threshold for checking valid window width
+        if window_width <= 1:
+            # Schedule a retry after window is fully drawn
+            self.root.after(100, self._update_layout_for_width)
+            return
+            
+        # Threshold for switching layouts (adjust as needed)
+        threshold = 550
+        
+        if window_width < threshold and not self.is_narrow_layout:
+            # Switch to narrow layout
+            self._switch_to_narrow_layout()
+        elif window_width >= threshold and self.is_narrow_layout:
+            # Switch to wide layout
+            self._switch_to_wide_layout()
+            
+    def _switch_to_narrow_layout(self):
+        """Switch to grid layout for narrow windows"""
+        # Hide wide layout
+        if hasattr(self, 'wide_container'):
+            self.wide_container.pack_forget()
+            
+        # Show narrow layout
+        if hasattr(self, 'narrow_container'):
+            self.narrow_container.pack(fill=tk.X)
+                
+        self.is_narrow_layout = True
+        
+        # Update the UI to reflect current state
+        self.update_select_button(self.parent.window_selector.selecting_window)
+        
+    def _switch_to_wide_layout(self):
+        """Switch to original left/right layout for wide windows"""
+        # Hide narrow layout
+        if hasattr(self, 'narrow_container'):
+            self.narrow_container.pack_forget()
+            
+        # Show wide layout
+        if hasattr(self, 'wide_container'):
+            self.wide_container.pack(fill=tk.X)
+            
+        self.is_narrow_layout = False
+        
+        # Update the UI to reflect current state
+        self.update_select_button(self.parent.window_selector.selecting_window)
+        
+    def _on_window_resize(self, event):
+        """Handle window resize events to update button layout"""
+        # Only respond to root window resize events, not other widgets
+        if event.widget == self.root:
+            # Use a short delay to prevent too many updates during resize
+            if hasattr(self, '_resize_after_id'):
+                self.root.after_cancel(self._resize_after_id)
+            self._resize_after_id = self.root.after(100, self._update_layout_for_width)
+            
     def _create_search_bar(self, parent):
         """Create search functionality for programs"""
         try:
@@ -756,14 +928,40 @@ class MainWindow(BaseWidget):
         
         if os_name == "Windows":
             # Windows uses <MouseWheel> event
-            self.canvas.bind_all("<MouseWheel>", self._on_mousewheel_windows)
+            # Only bind to canvas and its child widgets, not all widgets
+            self.canvas.bind("<MouseWheel>", self._on_mousewheel_windows)
+            self.programs_frame.bind("<MouseWheel>", self._on_mousewheel_windows)
         elif os_name == "Darwin":
             # macOS uses <MouseWheel> event with different scaling
-            self.canvas.bind_all("<MouseWheel>", self._on_mousewheel_macos)
+            self.canvas.bind("<MouseWheel>", self._on_mousewheel_macos)
+            self.programs_frame.bind("<MouseWheel>", self._on_mousewheel_macos)
         else:
             # Linux uses Button-4 and Button-5 for scroll up/down
-            self.canvas.bind_all("<Button-4>", self._on_mousewheel_linux_up)
-            self.canvas.bind_all("<Button-5>", self._on_mousewheel_linux_down)
+            self.canvas.bind("<Button-4>", self._on_mousewheel_linux_up)
+            self.canvas.bind("<Button-5>", self._on_mousewheel_linux_down)
+            self.programs_frame.bind("<Button-4>", self._on_mousewheel_linux_up)
+            self.programs_frame.bind("<Button-5>", self._on_mousewheel_linux_down)
+            
+        # We need to bind to all child widgets in the programs_frame to ensure scrolling works
+        # when the mouse is over any program item
+        self._bind_mousewheel_to_children(self.programs_frame)
+        
+    def _bind_mousewheel_to_children(self, widget):
+        """Recursively bind mousewheel events to all children of a widget"""
+        os_name = platform.system()
+        
+        for child in widget.winfo_children():
+            if os_name == "Windows":
+                child.bind("<MouseWheel>", self._on_mousewheel_windows)
+            elif os_name == "Darwin":
+                child.bind("<MouseWheel>", self._on_mousewheel_macos)
+            else:
+                child.bind("<Button-4>", self._on_mousewheel_linux_up)
+                child.bind("<Button-5>", self._on_mousewheel_linux_down)
+                
+            # Recursive call for child's children
+            if len(child.winfo_children()) > 0:
+                self._bind_mousewheel_to_children(child)
     
     def _on_mousewheel_windows(self, event):
         """Handle mousewheel scrolling on Windows"""
@@ -836,12 +1034,15 @@ class MainWindow(BaseWidget):
         
     def update_select_button(self, selecting):
         """Update select window button text based on selection state"""
-        if not hasattr(self, 'select_button'):
+        if not hasattr(self, 'narrow_select_button') or not hasattr(self, 'wide_select_button'):
             return
             
         text = SELECT_WINDOW_ACTIVE_TEXT if selecting else SELECT_WINDOW_BUTTON_TEXT
         color = ModernStyle.get_button_toggle_color() if selecting else ModernStyle.get_success_color()
-        self.select_button.configure(text=text, bg=color, activebackground=color)
+        
+        # Update both wide and narrow buttons
+        self.wide_select_button.configure(text=text, bg=color, activebackground=color)
+        self.narrow_select_button.configure(text=text, bg=color, activebackground=color)
         
     def update_status(self, text, is_active=True):
         """Update status text with appropriate styling"""
@@ -895,6 +1096,12 @@ class MainWindow(BaseWidget):
             self.toggle_button.bind("<Enter>", on_enter)
             self.toggle_button.bind("<Leave>", on_leave)
 
+    def update_program_bindings(self):
+        """Rebind mousewheel events to all children of programs_frame
+        This should be called whenever new program widgets are added"""
+        if hasattr(self, 'programs_frame'):
+            self._bind_mousewheel_to_children(self.programs_frame)
+            
     def update_ui_for_theme(self):
         """Update UI elements for the current theme"""
         # Update window background
@@ -918,10 +1125,14 @@ class MainWindow(BaseWidget):
                 )
         
         # Update button colors
-        if hasattr(self, 'select_button'):
-            selecting = self.select_button.cget('text') == SELECT_WINDOW_ACTIVE_TEXT
+        if hasattr(self, 'wide_select_button'):
+            selecting = self.wide_select_button.cget('text') == SELECT_WINDOW_ACTIVE_TEXT
             color = ModernStyle.get_button_toggle_color() if selecting else ModernStyle.get_success_color()
-            self.select_button.configure(bg=color, activebackground=color)
+            self.wide_select_button.configure(bg=color, activebackground=color)
+        if hasattr(self, 'narrow_select_button'):
+            selecting = self.narrow_select_button.cget('text') == SELECT_WINDOW_ACTIVE_TEXT
+            color = ModernStyle.get_button_toggle_color() if selecting else ModernStyle.get_success_color()
+            self.narrow_select_button.configure(bg=color, activebackground=color)
         
         # Update pin button
         if hasattr(self, 'toggle_button'):
@@ -993,7 +1204,10 @@ class MainWindow(BaseWidget):
         self.root.deiconify()
         self.root.lift()
         self.root.focus_force()
-
+        
+        # Update layout after window is visible
+        self.root.after(200, self._update_layout_for_width)
+        
     def _clear_search_focus(self, event=None):
         """Clear focus from search entry when clicking elsewhere"""
         # Only process if we have a search entry and the click wasn't on the search entry

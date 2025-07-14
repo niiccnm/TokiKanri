@@ -4,3 +4,4 @@ pywin32>=305  # For Windows GUI interaction
 psutil>=5.9.0  # For process management
 pillow>=10.0  # For image handling in system tray icons (PIL)
 winsdk>=1.0.0b7  # For Windows Media Control API
+windows-toasts>=1.3.0  # For Windows toast notifications

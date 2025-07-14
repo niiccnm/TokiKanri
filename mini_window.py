@@ -10,7 +10,7 @@ from logger import Logger
 # Constants for MiniWindow
 MINI_WINDOW_TITLE = "TokiKanri Mini"
 TITLE_BAR_HEIGHT = 1
-TIME_LABEL_DEFAULT_TEXT = "00:00"
+TIME_LABEL_DEFAULT_TEXT = "--:--"  # Changed from "00:00" to "--:--"
 TIME_LABEL_FONT = ("Helvetica", 18, "bold")
 TIME_LABEL_FG = "white"
 TIME_LABEL_PADY = (3, 4)
