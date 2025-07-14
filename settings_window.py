@@ -520,26 +520,18 @@ class SettingsWindow(tk.Toplevel, BaseWidget):
         
         if startup_enabled:
             try:
-                # Try to enable startup in system
-                if enable_startup():
-                    self.app.logger.info("Application set to start with Windows")
-                else:
-                    self.app.logger.warning("Failed to set application to start with Windows")
-                    self.startup_var.set(False)
-                    self.config_manager.set("start_at_startup", False)
+                # Enable startup in system
+                enable_startup()
+                self.app.logger.info("Application set to start with Windows")
             except Exception as e:
                 self.app.logger.error(f"Error enabling startup: {e}")
                 self.startup_var.set(False)
                 self.config_manager.set("start_at_startup", False)
         else:
             try:
-                # Try to disable startup in system
-                if disable_startup():
-                    self.app.logger.info("Application will no longer start with Windows")
-                else:
-                    self.app.logger.warning("Failed to remove application from Windows startup")
-                    self.startup_var.set(True)
-                    self.config_manager.set("start_at_startup", True)
+                # Disable startup in system
+                disable_startup()
+                self.app.logger.info("Application will no longer start with Windows")
             except Exception as e:
                 self.app.logger.error(f"Error disabling startup: {e}")
                 self.startup_var.set(True)

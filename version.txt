@@ -33,7 +33,7 @@ VSVersionInfo(
         StringStruct(u'FileDescription', u'TokiKanri Time Tracker'),
         StringStruct(u'FileVersion', u'0.0.3'),
         StringStruct(u'InternalName', u'TokiKanri'),
-        StringStruct(u'LegalCopyright', u'© 2023 nncc. All rights reserved.'),
+        StringStruct(u'LegalCopyright', u'© 2025 nncc. All rights reserved.'),
         StringStruct(u'OriginalFilename', u'TokiKanri.exe'),
         StringStruct(u'ProductName', u'TokiKanri'),
         StringStruct(u'ProductVersion', u'0.0.3')])
