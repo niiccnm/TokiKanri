@@ -22,7 +22,7 @@ The application tracks the active window on your desktop and records the time sp
 - **Media Playback Detection**: Optionally only tracks time when media is actually playing, using Windows Media Control API.
 - **Customizable Media Programs**: Add or remove programs that should be considered media players for Media Mode.
 - **Automatic Updates**: Checks for new versions at startup and provides the option to manually check for updates in the Settings window.
-- **Responsive Layout**: The main window adapts to different sizes, showing essential controls even when minimized.
+- **Responsive Layout**: The main window adapts to different sizes, showing essential controls when minimized.
 - **Windows Notifications**: Receives toast notifications for media API failures and recovery.
 - **Timer Controls**: You can reset timers for individual programs or for all tracked programs at once.
 - **Program Management**: Add new programs to the tracking list or remove existing ones.
@@ -50,6 +50,7 @@ To run this application, you will need the following:
   - `psutil` (version 5.9.0 or higher)
   - `pillow` (version 10.0 or higher) for system tray icons
   - `winsdk` (version 1.0.0b7 or higher) for media playback detection
+  - `windows-toasts` (version 1.3.0 or higher) for Windows toast notifications
 
 You can install the required packages using pip:
 
