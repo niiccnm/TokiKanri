@@ -21,6 +21,9 @@ The application tracks the active window on your desktop and records the time sp
 - **Media Mode**: Tracks window activity for media players without requiring user input, perfect for watching videos or listening to music.
 - **Media Playback Detection**: Optionally only tracks time when media is actually playing, using Windows Media Control API.
 - **Customizable Media Programs**: Add or remove programs that should be considered media players for Media Mode.
+- **Automatic Updates**: Checks for new versions at startup and provides the option to manually check for updates in the Settings window.
+- **Responsive Layout**: The main window adapts to different sizes, showing essential controls even when minimized.
+- **Windows Notifications**: Receives toast notifications for media API failures and recovery.
 - **Timer Controls**: You can reset timers for individual programs or for all tracked programs at once.
 - **Program Management**: Add new programs to the tracking list or remove existing ones.
 - **Always on Top**: Pin the window to keep it visible over other applications.
@@ -34,6 +37,7 @@ The application tracks the active window on your desktop and records the time sp
   - Windows startup integration
   - Media mode for tracking without user input
   - Customize media programs list
+  - Check for updates manually
 - **Import/Export**: Save and load your tracking data and configuration settings.
 
 ## Requirements
@@ -86,6 +90,8 @@ python main.py
 - **Media Programs**: Add or remove programs that should be considered media players.
 - **Require Media Playback**: Only track time for media programs when media is actually playing.
 - **Dark Mode**: Toggle between light and dark themes.
+- **Check for Updates**: Manually check for new versions of the application.
+- **Media API Status**: Shows the current status of the Windows Media Control API.
 
 ### Media Mode
 Media Mode is designed for tracking time spent watching videos or listening to music. When enabled:
@@ -126,7 +132,7 @@ The final executable will be located in the `dist` directory.
 
 For a detailed list of changes in each version, please see the [CHANGELOG.md](CHANGELOG.md) file.
 
-Current version: 0.0.2 (2025-06-21)
+Current version: 0.0.3 (2025-07-14)
 
 ## License
 

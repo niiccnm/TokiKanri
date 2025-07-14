@@ -51,7 +51,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Enhanced spacing and padding for better visual balance
   - Simplified label text for better clarity
 - Replaced win10toast with Windows-Toasts package for notifications to fix deprecated dependency warnings
-- Changes in existing functionality
 
 ### Fixed
 - Fixed blocking operations in GUI thread in program_tracker.py
